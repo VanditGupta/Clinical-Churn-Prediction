@@ -1,0 +1,68 @@
+Clinical Study CLV Analysis Report
+==================================================
+
+Overall Statistics:
+--------------------
+Total participants: 20000
+Average CLV: $878.51
+Median CLV: $513.43
+CLV Standard Deviation: $1,055.17
+Total CLV Value: $17,570,219.06
+
+Risk Analysis:
+---------------
+                    clv                     churn_probability
+                   mean count           sum              mean
+risk_category                                                
+Low Risk       1927.022  6932  1.335812e+07             0.192
+Medium Risk     620.595  5542  3.439339e+06             0.435
+High Risk       102.679  7526  7.727635e+05             0.774
+
+CLV by Study Type:
+--------------------
+               mean  count         sum
+study_type                            
+Phase I      657.64   4043  2658838.40
+Phase II     834.11  10014  8352817.06
+Phase III   1103.58   5943  6558563.60
+
+CLV by Condition:
+------------------
+                          mean  count         sum
+condition                                        
+Autoimmune Disease      820.99    970   796362.45
+Cancer                  849.53    982   834234.72
+Cardiovascular Disease  911.97   3007  2742285.94
+Diabetes                814.47   5055  4117129.00
+Hypertension            926.12   4038  3739658.68
+Mental Health           867.75   2058  1785833.91
+Obesity                 919.20   1946  1788770.69
+Respiratory Disease     908.41   1944  1765943.66
+
+Top 10 CLV Participants:
+-------------------------
+      participant_id           clv  churn_probability study_type            condition
+16036        P016037  11102.998021           0.011822  Phase III         Hypertension
+15273        P015274  10118.549009           0.028700  Phase III         Hypertension
+6412         P006413  10080.265723           0.021953  Phase III         Hypertension
+18295        P018296   9752.524031           0.026870   Phase II             Diabetes
+159          P000160   9740.698679           0.012817  Phase III         Hypertension
+2188         P002189   9612.599117           0.020546  Phase III         Hypertension
+15897        P015898   9421.709966           0.023035  Phase III  Respiratory Disease
+4666         P004667   9335.404851           0.026097  Phase III         Hypertension
+9198         P009199   9081.058894           0.018249   Phase II         Hypertension
+7273         P007274   8908.505634           0.038494   Phase II             Diabetes
+
+Bottom 10 CLV Participants:
+----------------------------
+   participant_id  clv  churn_probability study_type               condition
+0         P000001  0.0           0.873511   Phase II                 Obesity
+2         P000003  0.0           0.838996   Phase II     Respiratory Disease
+8         P000009  0.0           0.829312   Phase II                Diabetes
+13        P000014  0.0           0.864896  Phase III                Diabetes
+18        P000019  0.0           0.895589   Phase II                Diabetes
+27        P000028  0.0           0.841876   Phase II  Cardiovascular Disease
+31        P000032  0.0           0.909715    Phase I            Hypertension
+35        P000036  0.0           0.914253   Phase II                Diabetes
+45        P000046  0.0           0.866662   Phase II  Cardiovascular Disease
+51        P000052  0.0           0.933092  Phase III     Respiratory Disease

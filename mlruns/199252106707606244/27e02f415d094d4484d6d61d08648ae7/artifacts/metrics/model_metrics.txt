@@ -1,0 +1,21 @@
+Clinical Study Churn Prediction Model - Performance Metrics
+============================================================
+
+AUC Score: 0.6430
+Precision: 0.5969
+Recall: 0.5517
+F1 Score: 0.5734
+Accuracy: 0.6072
+
+Top 10 Feature Importance:
+------------------------------
+last_visit_gap_days: 14413.1808
+tenure_months: 13687.0189
+visit_adherence_rate: 12793.7700
+monthly_stipend: 12234.1947
+income: 11536.1902
+survey_score_avg: 11423.7466
+age: 11163.6624
+contact_frequency: 10064.3896
+device_usage_compliance: 10031.7909
+has_side_effects: 6294.9206

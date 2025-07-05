@@ -1,0 +1,10 @@
+artifact_location: file:///Users/vanditgupta/Vandit/Github/Projects/DataNutts/clinical_churn_clv/mlruns/199252106707606244/models/m-4701538843ce4f22a5724ca14ccebe44/artifacts
+creation_timestamp: 1751668298445
+experiment_id: '199252106707606244'
+last_updated_timestamp: 1751668300887
+model_id: m-4701538843ce4f22a5724ca14ccebe44
+model_type: null
+name: clinical_churn_lightgbm
+source_run_id: 5f4081bd3b5f451fbacb119272ad88c7
+status: 2
+status_message: null

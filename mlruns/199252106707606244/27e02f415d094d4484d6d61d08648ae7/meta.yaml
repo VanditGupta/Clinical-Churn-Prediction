@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/vanditgupta/Vandit/Github/Projects/DataNutts/clinical_churn_clv/mlruns/199252106707606244/27e02f415d094d4484d6d61d08648ae7/artifacts
+end_time: 1751668181178
+entry_point_name: ''
+experiment_id: '199252106707606244'
+lifecycle_stage: active
+run_id: 27e02f415d094d4484d6d61d08648ae7
+run_name: clinical_churn_training_20250704_182921
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1751668161225
+status: 3
+tags: []
+user_id: vanditgupta

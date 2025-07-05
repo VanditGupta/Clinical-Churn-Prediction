@@ -1,0 +1,21 @@
+artifact_path: file:///Users/vanditgupta/Vandit/Github/Projects/DataNutts/clinical_churn_clv/mlruns/199252106707606244/models/m-4701538843ce4f22a5724ca14ccebe44/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.lgb
+    lgb_version: 4.6.0
+    model_class: lightgbm.basic.Booster
+  python_function:
+    data: model.lgb
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.11.13
+mlflow_version: 3.1.1
+model_id: m-4701538843ce4f22a5724ca14ccebe44
+model_size_bytes: 3410491
+model_uuid: m-4701538843ce4f22a5724ca14ccebe44
+prompts: null
+run_id: 5f4081bd3b5f451fbacb119272ad88c7
+utc_time_created: '2025-07-04 22:31:38.461034'
