@@ -22,6 +22,10 @@ from datetime import datetime
 
 from config import *
 
+# Set up MLflow tracking and experiment
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+
 def load_and_preprocess_data(filepath):
     """
     Load and preprocess the clinical study data

@@ -60,10 +60,10 @@ def main():
     print("=" * 60)
     print("\nTo view results in MLflow UI:")
     print(f"1. Navigate to: {project_root}")
-    print("2. Run: mlflow ui")
-    print("3. Open browser to: http://localhost:5000")
+    print("2. Run: mlflow ui --port 8080")
+    print("3. Open browser to: http://localhost:8080")
     print("\nTo compare runs:")
-    print("1. Run: mlflow ui --port 5000")
+    print("1. Run: mlflow ui --port 8080")
     print("2. Select experiment: clinical_churn_prediction")
     print("3. Compare different runs and their metrics")
 

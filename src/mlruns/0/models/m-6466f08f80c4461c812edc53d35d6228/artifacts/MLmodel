@@ -1,0 +1,21 @@
+artifact_path: file:///Users/vanditgupta/Vandit/Github/Projects/Clinical%20Churn%20Prediction/clinical_churn_clv/src/mlruns/0/models/m-6466f08f80c4461c812edc53d35d6228/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.lgb
+    lgb_version: 4.6.0
+    model_class: lightgbm.basic.Booster
+  python_function:
+    data: model.lgb
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.11.13
+mlflow_version: 3.1.1
+model_id: m-6466f08f80c4461c812edc53d35d6228
+model_size_bytes: 3410491
+model_uuid: m-6466f08f80c4461c812edc53d35d6228
+prompts: null
+run_id: de1fed1a3a794347953c861601bf1178
+utc_time_created: '2025-07-05 18:36:56.051479'

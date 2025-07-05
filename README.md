@@ -16,6 +16,12 @@ This project helps clinical research organizations:
 
 ```
 clinical_churn_clv/
+├── api/                                   # FastAPI backend
+│   ├── main.py                           # FastAPI app with prediction endpoints
+│   ├── schemas.py                        # Pydantic request/response models
+│   └── utils.py                          # Model loading and prediction utilities
+├── app/
+│   └── dashboard.py                      # Streamlit frontend dashboard
 ├── mlruns/                                # MLflow experiment tracking directory
 │   └── 199252106707606244/               # Experiment runs and artifacts
 ├── data/raw/clinical_data.csv             # 20,000 synthetic patient records
@@ -38,8 +44,9 @@ clinical_churn_clv/
 │   ├── data_gen.py         # Generates mock clinical study data
 │   ├── train.py            # Trains LightGBM model with MLflow tracking
 │   ├── clv_utils.py        # Computes CLV from predicted churn probabilities
+│   ├── shap_explainer.py   # SHAP explainer utility for LightGBM
 │   └── config.py           # Contains constants, file paths, model params
-├── requirements.txt        # Python dependencies (includes MLflow)
+├── requirements.txt        # Python dependencies (includes FastAPI, Streamlit)
 ├── README.md               # This file
 └── .gitignore              # Git ignore patterns
 ```
@@ -82,9 +89,9 @@ The MLflow-enabled training will:
 
 ```bash
 # Start MLflow UI
-mlflow ui
+mlflow ui --port 8080
 
-# Open browser to: http://localhost:5000
+# Open browser to: http://localhost:8080
 # Navigate to experiment: "clinical_churn_prediction"
 ```
 
@@ -96,6 +103,54 @@ python clv_utils.py
 ```
 
 This creates `predictions/predictions_with_clv.csv` with churn probabilities and CLV values.
+
+### 6. Run the Web Application
+
+#### Option 1: Start All Services at Once (Recommended)
+
+```bash
+# Start all services with proper port management
+python scripts/start_services.py
+```
+
+This will start:
+- FastAPI Backend on port 8000
+- Streamlit Frontend on port 8501  
+- MLflow UI on port 8080
+
+#### Option 2: Start Services Individually
+
+##### Start FastAPI Backend
+
+```bash
+uvicorn api.main:app --reload
+```
+
+The API will be available at: http://localhost:8000
+
+##### Start Streamlit Frontend
+
+```bash
+streamlit run app/dashboard.py
+```
+
+The dashboard will be available at: http://localhost:8501
+
+##### Start MLflow UI
+
+```bash
+mlflow ui --port 8080
+```
+
+The MLflow UI will be available at: http://localhost:8080
+
+#### Service URLs
+
+- **FastAPI Backend**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Alternative API docs**: http://localhost:8000/redoc
+- **Streamlit Dashboard**: http://localhost:8501
+- **MLflow UI**: http://localhost:8080
 
 ## 📊 Dataset Features
 
@@ -171,11 +226,49 @@ The synthetic dataset includes 20 features:
   - `predictions/predictions_with_clv.csv` (predictions with CLV)
   - `predictions/clv_analysis_report.txt` (detailed analysis)
 
+### `shap_explainer.py`
+- SHAP explainer utility for LightGBM models
+- Provides model interpretability functions
+- Handles feature importance and explanation generation
+- Used by both API and dashboard for real-time explanations
+
+### `start_services.py`
+- Comprehensive service manager for the web application
+- Starts FastAPI backend, Streamlit frontend, and MLflow UI
+- Handles port availability checks and service health monitoring
+- Provides unified startup and shutdown for all services
+- Includes proper error handling and process management
+
+### `check_ports.py`
+- Port availability checker for all services
+- Identifies which processes are using required ports
+- Provides commands to stop conflicting processes
+- Helps diagnose startup issues before they occur
+
 ### `config.py`
 - Central configuration file with all constants
 - File paths, model parameters, data generation ranges
 - Categorical options and feature definitions
 - Visualization directory configuration
+
+## 🌐 Web Application
+
+### FastAPI Backend (`api/`)
+- **`main.py`**: FastAPI application with prediction and explanation endpoints
+- **`schemas.py`**: Pydantic models for request/response validation
+- **`utils.py`**: Model loading, prediction, and CLV calculation utilities
+
+### Streamlit Frontend (`app/`)
+- **`dashboard.py`**: Interactive web dashboard for patient prediction
+- Real-time churn probability and CLV estimation
+- SHAP-based feature explanation visualizations
+- User-friendly input forms and result displays
+
+### API Endpoints
+- **`POST /predict`**: Accepts patient features, returns churn probability and CLV
+- **`POST /explain`**: Returns SHAP values for feature explanation
+- **`GET /health`**: Health check endpoint
+- **`GET /`**: API information and documentation
 
 ## 📈 Model Performance
 
@@ -272,7 +365,7 @@ python scripts/run_with_tracking.py
 #### View Results
 ```bash
 # Start MLflow UI
-mlflow ui
+mlflow ui --port 8080
 
 # Navigate to experiment and explore:
 # - Model performance metrics
@@ -338,6 +431,17 @@ Adjust CLV parameters in `clv_utils.py`:
 
 ## 📋 Requirements
 
+### Option 1: Clean Environment (Recommended)
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install compatible versions
+pip install -r requirements_clean.txt
+```
+
+### Option 2: Manual Installation
 - Python 3.8+
 - pandas >= 1.5.0
 - numpy >= 1.21.0
@@ -346,6 +450,12 @@ Adjust CLV parameters in `clv_utils.py`:
 - matplotlib >= 3.5.0
 - seaborn >= 0.11.0
 - shap >= 0.41.0
+- fastapi >= 0.104.0
+- uvicorn >= 0.24.0
+- streamlit >= 1.28.0
+- requests >= 2.31.0
+
+**Note**: For best compatibility and to avoid dependency conflicts, use the clean environment setup with `requirements_clean.txt`.
 
 ## 🚨 Troubleshooting
 
@@ -354,6 +464,10 @@ Adjust CLV parameters in `clv_utils.py`:
 1. **Import Error**: Make sure you're in the `src` directory when running scripts
 2. **File Not Found**: Run scripts in order: `data_gen.py` → `train.py` → `clv_utils.py`
 3. **Memory Error**: Reduce `NUM_RECORDS` in `config.py` for smaller datasets
+4. **API Connection Error**: Ensure FastAPI backend is running before starting Streamlit
+5. **Port Conflicts**: Check port availability with `python scripts/check_ports.py`
+
+📋 **For detailed port configuration and troubleshooting, see [PORT_CONFIGURATION.md](PORT_CONFIGURATION.md)**
 
 ### Performance Tips
 
@@ -361,6 +475,14 @@ Adjust CLV parameters in `clv_utils.py`:
 - Adjust `num_boost_round` in training for faster/slower training
 - Modify cross-validation folds based on dataset size
 - SHAP analysis can be computationally intensive - consider using a subset for large datasets
+- Model and explainer are loaded once at API startup for optimal performance
+
+### Web Application Issues
+
+1. **FastAPI not starting**: Check if port 8000 is available
+2. **Streamlit not connecting**: Verify FastAPI is running on localhost:8000
+3. **SHAP visualization errors**: Ensure matplotlib backend is properly configured
+4. **MLflow UI crashes**: Use `--workers 1` flag and ensure compatible numpy/pandas versions
 
 ## 📄 License
 
