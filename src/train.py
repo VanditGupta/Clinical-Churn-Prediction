@@ -672,7 +672,9 @@ def log_mlflow_metrics(metrics, cv_results=None):
     print("Metrics logged successfully")
 
 
-def save_model_and_metadata(model, label_encoders, metrics, feature_importance, X_train):
+def save_model_and_metadata(
+    model, label_encoders, metrics, feature_importance, X_train
+):
     """
     Save the trained model and metadata
 
@@ -691,40 +693,43 @@ def save_model_and_metadata(model, label_encoders, metrics, feature_importance, 
     import mlflow.models
     import numpy as np
     import pandas as pd
-    
+
     # Create a sample input for the model
-    sample_data = pd.DataFrame({
-        'age': [55],
-        'gender': [0],  # Encoded value
-        'income': [60000],
-        'location': [0],  # Encoded value
-        'study_type': [1],  # Encoded value
-        'condition': [0],  # Encoded value
-        'visit_adherence_rate': [0.7],
-        'tenure_months': [12],
-        'last_visit_gap_days': [15],
-        'num_medications': [3],
-        'has_side_effects': [0],  # Encoded value
-        'transport_support': [1],  # Encoded value
-        'monthly_stipend': [400],
-        'contact_frequency': [3.0],
-        'support_group_member': [0],  # Encoded value
-        'language_barrier': [0],  # Encoded value
-        'device_usage_compliance': [0.6],
-        'survey_score_avg': [7.0]
-    })
-    
+    sample_data = pd.DataFrame(
+        {
+            "age": [55],
+            "gender": [0],  # Encoded value
+            "income": [60000],
+            "location": [0],  # Encoded value
+            "study_type": [1],  # Encoded value
+            "condition": [0],  # Encoded value
+            "visit_adherence_rate": [0.7],
+            "tenure_months": [12],
+            "last_visit_gap_days": [15],
+            "num_medications": [3],
+            "has_side_effects": [0],  # Encoded value
+            "transport_support": [1],  # Encoded value
+            "monthly_stipend": [400],
+            "contact_frequency": [3.0],
+            "support_group_member": [0],  # Encoded value
+            "language_barrier": [0],  # Encoded value
+            "device_usage_compliance": [0.6],
+            "survey_score_avg": [7.0],
+        }
+    )
+
     input_example = sample_data.values
     signature = None
     try:
         from mlflow.models.signature import infer_signature
+
         # Use a small sample of training data for signature inference
         sample_features = X_train.iloc[:1]  # Use first training sample
         sample_prediction = model.predict(sample_features)
         signature = infer_signature(sample_features, sample_prediction)
     except Exception:
         pass
-    
+
     mlflow.lightgbm.log_model(
         model,
         artifact_path="model",
@@ -883,7 +888,9 @@ def main():
         )
 
         # Save model and metadata
-        save_model_and_metadata(model, label_encoders, metrics, feature_importance, X_train)
+        save_model_and_metadata(
+            model, label_encoders, metrics, feature_importance, X_train
+        )
 
         # Log all artifacts
         log_mlflow_artifacts()
