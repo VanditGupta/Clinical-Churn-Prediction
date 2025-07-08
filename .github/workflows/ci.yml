@@ -188,7 +188,9 @@ jobs:
       - name: Start services
         run: |
           docker compose up -d redis
-          docker run -d --name test-api --network clinical_churn_clv_default -p 8000:8000 clinical-api:test
+          # Get the actual network name from docker compose
+          NETWORK_NAME=$(docker compose ps -q redis | xargs docker inspect -f '{{range $net, $config := .NetworkSettings.Networks}}{{$net}}{{end}}')
+          docker run -d --name test-api --network $NETWORK_NAME -p 8000:8000 clinical-api:test
           sleep 10
           
       - name: Test API endpoints
