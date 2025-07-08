@@ -22,6 +22,15 @@ def setup_mlflow():
     """Setup MLflow tracking and experiment"""
     print("Setting up MLflow experiment tracking...")
 
+    # Safety check: ensure tracking URI is within project directory
+    if not str(MLFLOW_TRACKING_URI).startswith(f"file://{project_root}"):
+        print(
+            f"⚠️  Warning: MLflow tracking URI is outside project directory: {MLFLOW_TRACKING_URI}"
+        )
+        print(
+            f"   This may cause permission issues. Expected: file://{project_root}/mlruns"
+        )
+
     # Set tracking URI
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     print(f"MLflow tracking URI: {MLFLOW_TRACKING_URI}")

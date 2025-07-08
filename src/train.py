@@ -30,6 +30,15 @@ import mlflow.models
 from config import *
 
 # Set up MLflow tracking and experiment
+# Safety check: ensure tracking URI is within project directory
+if not str(MLFLOW_TRACKING_URI).startswith(f"file://{PROJECT_ROOT}"):
+    print(
+        f"⚠️  Warning: MLflow tracking URI is outside project directory: {MLFLOW_TRACKING_URI}"
+    )
+    print(
+        f"   This may cause permission issues. Expected: file://{PROJECT_ROOT}/mlruns"
+    )
+
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
