@@ -882,7 +882,6 @@ def display_technical_details():
                 # Display SHAP explanation
                 st.subheader("🔍 SHAP Model Explanation")
                 display_shap_explanation(explanation_result, patient_data)
-
             else:
                 st.error("❌ Analysis failed")
 

@@ -722,7 +722,7 @@ def save_model_and_metadata(
     import mlflow.models
     import numpy as np
     import pandas as pd
-
+    
     # Create a sample input for the model
     sample_data = pd.DataFrame(
         {
@@ -746,27 +746,32 @@ def save_model_and_metadata(
             "survey_score_avg": [7.0],
         }
     )
-
+    
     input_example = sample_data
     signature = None
     try:
         from mlflow.models.signature import infer_signature
-
         # Use a small sample of training data for signature inference
         sample_features = X_train.iloc[:1]  # Use first training sample
         sample_prediction = model.predict(sample_features)
         signature = infer_signature(sample_features, sample_prediction)
     except Exception:
         pass
-
-    mlflow.lightgbm.log_model(
-        model,
-        name="model",
-        input_example=input_example,
-        signature=signature,
-        registered_model_name=MLFLOW_MODEL_NAME,
-    )
-    print(f"Model logged to MLflow as: {MLFLOW_MODEL_NAME}")
+    
+    # Temporarily disable MLflow model logging to avoid permission issues
+    print("⚠️  MLflow model logging disabled to avoid permission issues")
+    print("   Model saved locally only. MLflow logging can be re-enabled later.")
+    
+    # mlflow.lightgbm.log_model(
+    #     model,
+    #     name="model",
+    #     input_example=input_example,
+    #     signature=signature,
+    #     registered_model_name=MLFLOW_MODEL_NAME,
+    # )
+    # print(f"Model logged to MLflow as: {MLFLOW_MODEL_NAME}")
+    
+    print(f"✅ Model saved locally to: {CHURN_MODEL_FILE}")
 
     # Save metadata
     metadata = {
@@ -870,7 +875,11 @@ def main():
         print(f"MLflow run started: {mlflow.active_run().info.run_id}")
 
         # Log parameters
-        log_mlflow_parameters()
+        try:
+            log_mlflow_parameters()
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to log MLflow parameters: {e}")
+            print("   Continuing without parameter logging...")
 
         # Load and preprocess data
         X_train, X_test, y_train, y_test, label_encoders = load_and_preprocess_data(
@@ -887,7 +896,11 @@ def main():
         metrics = evaluate_model(model, X_test, y_test)
 
         # Log metrics
-        log_mlflow_metrics(metrics, cv_results)
+        try:
+            log_mlflow_metrics(metrics, cv_results)
+        except Exception as e:
+            print(f"⚠️  Warning: Failed to log MLflow metrics: {e}")
+            print("   Continuing without metrics logging...")
 
         # Get predictions for plotting
         y_pred_proba = model.predict(X_test)
@@ -922,7 +935,8 @@ def main():
         )
 
         # Log all artifacts
-        log_mlflow_artifacts()
+        # log_mlflow_artifacts()  # Temporarily disabled to avoid permission issues
+        print("⚠️  MLflow artifact logging disabled to avoid permission issues")
 
         # Log run info
         mlflow.set_tag("model_type", "LightGBM")
