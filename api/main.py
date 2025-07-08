@@ -160,7 +160,6 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    global redis_client
     if redis_client:
         await redis_client.close()
         print("Redis connection closed")
