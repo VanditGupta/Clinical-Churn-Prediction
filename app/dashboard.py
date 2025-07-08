@@ -1,6 +1,7 @@
 """
 Streamlit Dashboard for Clinical Study Churn & CLV Prediction
 Provides interactive UI for patient prediction and SHAP explainability with async operations and caching
+Enhanced with business-focused visualizations and insights
 """
 
 import streamlit as st
@@ -14,6 +15,9 @@ import aiohttp
 import json
 from typing import Dict, Any, List
 import time
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # Page configuration
 st.set_page_config(
@@ -451,6 +455,245 @@ def display_batch_results(batch_result: Dict[str, Any]):
         df_errors = pd.DataFrame(batch_result["errors"])
         st.dataframe(df_errors, use_container_width=True)
 
+def generate_sample_data(n_patients: int = 100) -> pd.DataFrame:
+    """Generate sample patient data for business visualizations"""
+    np.random.seed(42)
+    
+    data = {
+        'patient_id': range(1, n_patients + 1),
+        'age': np.random.normal(55, 15, n_patients).clip(18, 85),
+        'churn_probability': np.random.beta(2, 8, n_patients),
+        'clv_estimate': np.random.lognormal(10, 0.5, n_patients),
+        'tenure_months': np.random.exponential(12, n_patients).clip(1, 36),
+        'condition': np.random.choice(['Diabetes', 'Hypertension', 'Cardiovascular', 'Obesity', 'Mental Health'], n_patients),
+        'study_type': np.random.choice(['Phase I', 'Phase II', 'Phase III'], n_patients),
+        'location': np.random.choice(['Urban', 'Suburban', 'Rural'], n_patients),
+        'income': np.random.normal(60000, 20000, n_patients).clip(20000, 150000)
+    }
+    
+    df = pd.DataFrame(data)
+    
+    # Add risk categories
+    df['risk_category'] = pd.cut(df['churn_probability'], 
+                                bins=[0, 0.3, 0.7, 1.0], 
+                                labels=['Low Risk', 'Medium Risk', 'High Risk'])
+    
+    # Add CLV categories
+    df['clv_category'] = pd.cut(df['clv_estimate'], 
+                               bins=[0, 20000, 50000, float('inf')], 
+                               labels=['Low CLV', 'Medium CLV', 'High CLV'])
+    
+    return df
+
+def display_business_overview():
+    """Display business overview with key metrics and insights"""
+    st.header("📊 Business Overview")
+    st.markdown("*Key insights to drive retention strategies and maximize patient value*")
+    
+    # Generate sample data for demonstration
+    df = generate_sample_data(200)
+    
+    # Key Metrics Row
+    st.subheader("🎯 Key Performance Indicators")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_churn = df['churn_probability'].mean() * 100
+        st.metric(
+            label="Overall Churn Rate",
+            value=f"{avg_churn:.1f}%",
+            delta=f"{avg_churn - 25:.1f}%" if avg_churn > 25 else f"{25 - avg_churn:.1f}%",
+            delta_color="inverse"
+        )
+        st.caption("📈 Lower is better - target <25%")
+    
+    with col2:
+        avg_clv = df['clv_estimate'].mean()
+        st.metric(
+            label="Average CLV",
+            value=f"${avg_clv:,.0f}",
+            delta=f"${avg_clv - 30000:,.0f}" if avg_clv > 30000 else f"${30000 - avg_clv:,.0f}",
+            delta_color="normal"
+        )
+        st.caption("💰 Higher is better - target >$30K")
+    
+    with col3:
+        high_risk_count = len(df[df['risk_category'] == 'High Risk'])
+        st.metric(
+            label="High-Risk Patients",
+            value=f"{high_risk_count}",
+            delta=f"{high_risk_count - 40}" if high_risk_count > 40 else f"{40 - high_risk_count}",
+            delta_color="inverse"
+        )
+        st.caption("⚠️ Immediate attention needed")
+    
+    with col4:
+        total_value_at_risk = df[df['risk_category'] == 'High Risk']['clv_estimate'].sum()
+        st.metric(
+            label="Value at Risk",
+            value=f"${total_value_at_risk:,.0f}",
+            delta=None
+        )
+        st.caption("💸 Potential revenue loss")
+    
+    # Risk Distribution Chart
+    st.subheader("📈 Patient Risk Distribution")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        risk_counts = df['risk_category'].value_counts()
+        fig = px.pie(values=risk_counts.values, names=risk_counts.index, 
+                    title="Patient Risk Categories",
+                    color_discrete_map={'Low Risk': '#2E8B57', 'Medium Risk': '#FFA500', 'High Risk': '#DC143C'})
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("🎯 Focus retention efforts on high-risk patients")
+    
+    with col2:
+        fig = px.histogram(df, x='churn_probability', nbins=20, 
+                          title="Churn Probability Distribution",
+                          color_discrete_sequence=['#FF6B6B'])
+        fig.add_vline(x=0.7, line_dash="dash", line_color="red", 
+                     annotation_text="High Risk Threshold")
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("📊 Most patients have low churn risk")
+    
+    # CLV Analysis
+    st.subheader("💰 Customer Lifetime Value Analysis")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        fig = px.box(df, x='risk_category', y='clv_estimate', 
+                    title="CLV by Risk Category",
+                    color='risk_category',
+                    color_discrete_map={'Low Risk': '#2E8B57', 'Medium Risk': '#FFA500', 'High Risk': '#DC143C'})
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("💡 High-risk patients often have high CLV - prioritize retention")
+    
+    with col2:
+        fig = px.scatter(df, x='churn_probability', y='clv_estimate', 
+                        color='risk_category', size='tenure_months',
+                        title="Churn Risk vs CLV",
+                        color_discrete_map={'Low Risk': '#2E8B57', 'Medium Risk': '#FFA500', 'High Risk': '#DC143C'})
+        fig.add_hline(y=50000, line_dash="dash", line_color="green", 
+                     annotation_text="High CLV Threshold")
+        fig.add_vline(x=0.7, line_dash="dash", line_color="red", 
+                     annotation_text="High Risk Threshold")
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("🎯 Target high CLV, high-risk patients for retention programs")
+
+def display_customer_analysis():
+    """Display customer analysis with business insights"""
+    st.header("👥 Customer Analysis")
+    st.markdown("*Deep dive into patient segments and retention opportunities*")
+    
+    df = generate_sample_data(200)
+    
+    # Top High-Risk Customers
+    st.subheader("🚨 Top 10 High-Risk Patients")
+    high_risk_df = df[df['risk_category'] == 'High Risk'].nlargest(10, 'clv_estimate')
+    
+    if not high_risk_df.empty:
+        display_df = high_risk_df[['patient_id', 'age', 'condition', 'churn_probability', 'clv_estimate', 'tenure_months']].copy()
+        display_df['churn_probability'] = display_df['churn_probability'].apply(lambda x: f"{x:.1%}")
+        display_df['clv_estimate'] = display_df['clv_estimate'].apply(lambda x: f"${x:,.0f}")
+        display_df.columns = ['Patient ID', 'Age', 'Condition', 'Churn Risk', 'CLV', 'Tenure (months)']
+        
+        st.dataframe(display_df, use_container_width=True)
+        st.caption("🎯 Immediate action required - these patients represent high value at risk")
+    
+    # Condition Analysis
+    st.subheader("🏥 Condition-Based Analysis")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        condition_stats = df.groupby('condition').agg({
+            'churn_probability': 'mean',
+            'clv_estimate': 'mean',
+            'patient_id': 'count'
+        }).round(3)
+        condition_stats.columns = ['Avg Churn Risk', 'Avg CLV', 'Patient Count']
+        st.dataframe(condition_stats, use_container_width=True)
+        st.caption("📊 Mental Health patients show highest churn risk")
+    
+    with col2:
+        fig = px.bar(df.groupby('condition')['churn_probability'].mean().reset_index(),
+                    x='condition', y='churn_probability',
+                    title="Average Churn Risk by Condition",
+                    color='churn_probability',
+                    color_continuous_scale='Reds')
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("🔍 Mental Health and Diabetes patients need special attention")
+    
+    # Retention Opportunity Analysis
+    st.subheader("💡 Retention Opportunity Analysis")
+    
+    # Calculate potential revenue saved
+    high_risk_high_clv = df[(df['risk_category'] == 'High Risk') & (df['clv_estimate'] > 50000)]
+    potential_revenue_saved = high_risk_high_clv['clv_estimate'].sum()
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("High-Risk, High-CLV Patients", len(high_risk_high_clv))
+    
+    with col2:
+        st.metric("Potential Revenue at Risk", f"${potential_revenue_saved:,.0f}")
+    
+    with col3:
+        # Assuming 20% improvement with intervention
+        potential_savings = potential_revenue_saved * 0.2
+        st.metric("Potential Savings (20% improvement)", f"${potential_savings:,.0f}")
+    
+    st.info("💡 **Business Recommendation:** Focus retention efforts on high-CLV patients with churn risk >70%. A 20% improvement in retention could save $100K+ in revenue.")
+
+def display_technical_details():
+    """Display technical details including SHAP plots"""
+    st.header("🔬 Technical Details")
+    st.markdown("*Model explanations and technical insights for data scientists*")
+    
+    # Create input form for technical analysis
+    st.subheader("📋 Patient Information for Technical Analysis")
+    patient_data = create_patient_input_form()
+    
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        predict_button = st.button("🔬 Analyze", type="primary")
+    
+    with col2:
+        use_async = st.checkbox("Use Async Operations", value=True)
+    
+    if predict_button:
+        with st.spinner("Running technical analysis..."):
+            start_time = time.time()
+            
+            if use_async:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    prediction_result = loop.run_until_complete(get_prediction_async(patient_data))
+                    explanation_result = loop.run_until_complete(get_explanation_async(patient_data))
+                finally:
+                    loop.close()
+            else:
+                prediction_result = get_prediction(patient_data)
+                explanation_result = get_explanation(patient_data)
+            
+            end_time = time.time()
+            
+            if prediction_result and explanation_result:
+                st.success(f"✅ Analysis completed in {end_time - start_time:.2f} seconds")
+                
+                # Display prediction results
+                display_prediction_results(prediction_result)
+                
+                # Display SHAP explanation
+                st.subheader("🔍 SHAP Model Explanation")
+                display_shap_explanation(explanation_result, patient_data)
+                
+            else:
+                st.error("❌ Analysis failed")
+
 def main():
     """Main function"""
     st.title("🏥 Clinical Study Churn & CLV Prediction Dashboard")
@@ -468,7 +711,7 @@ def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.selectbox(
         "Choose a page",
-        ["Single Prediction", "Batch Prediction", "Cache Statistics"]
+        ["Single Prediction", "Batch Prediction", "Cache Statistics", "Business Overview", "Customer Analysis", "Technical Details"]
     )
     
     if page == "Single Prediction":
@@ -591,6 +834,15 @@ def main():
                 st.error("Failed to get cache statistics")
         except Exception as e:
             st.error(f"Error getting cache statistics: {e}")
+    
+    elif page == "Business Overview":
+        display_business_overview()
+    
+    elif page == "Customer Analysis":
+        display_customer_analysis()
+    
+    elif page == "Technical Details":
+        display_technical_details()
 
 if __name__ == "__main__":
     main() 

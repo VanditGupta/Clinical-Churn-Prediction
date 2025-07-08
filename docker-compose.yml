@@ -1,0 +1,49 @@
+version: '3.9'
+services:
+  api:
+    build:
+      context: .
+      target: api
+    container_name: clinical_api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      target: streamlit
+    container_name: clinical_app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    environment:
+      - API_BASE_URL=http://api:8000
+    restart: unless-stopped
+
+  mlflow:
+    build:
+      context: .
+      target: api
+    container_name: clinical_mlflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - mlruns:/app/mlruns
+    command: mlflow ui --host 0.0.0.0 --port 8080
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    container_name: clinical_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  mlruns: 

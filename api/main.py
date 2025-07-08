@@ -9,6 +9,7 @@ import json
 import time
 from typing import Dict, Any, Optional
 from functools import lru_cache
+import os
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,8 +56,9 @@ async def get_redis_client():
     global redis_client
     if redis_client is None:
         try:
+            redis_host = os.getenv("REDIS_HOST", "redis")
             redis_client = redis.Redis(
-                host='localhost',
+                host=redis_host,
                 port=6379,
                 db=0,
                 decode_responses=True,
@@ -67,7 +69,7 @@ async def get_redis_client():
             )
             # Test connection
             await redis_client.ping()
-            print("✅ Redis connection established")
+            print(f"✅ Redis connection established to {redis_host}")
         except Exception as e:
             print(f"⚠️ Redis connection failed: {e}. Using in-memory cache only.")
             redis_client = None

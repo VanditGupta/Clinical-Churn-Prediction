@@ -1,0 +1,238 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      version:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: 'latest'
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Deploy to Staging
+        if: github.event.inputs.environment == 'staging'
+        run: |
+          echo "🚀 Deploying to staging environment..."
+          
+          # Pull latest images
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
+          
+          # Deploy using docker-compose
+          echo "Deploying version: ${{ github.event.inputs.version }}"
+          
+          # Create staging docker-compose file
+          cat > docker-compose.staging.yml << EOF
+          version: '3.9'
+          services:
+            api:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              container_name: clinical_api_staging
+              ports:
+                - "8001:8000"
+              environment:
+                - REDIS_HOST=redis
+              depends_on:
+                - redis
+              restart: unless-stopped
+              
+            app:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
+              container_name: clinical_app_staging
+              ports:
+                - "8502:8501"
+              environment:
+                - API_BASE_URL=http://api:8000
+              depends_on:
+                - api
+              restart: unless-stopped
+              
+            mlflow:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              container_name: clinical_mlflow_staging
+              ports:
+                - "8081:8080"
+              volumes:
+                - mlruns_staging:/app/mlruns
+              command: mlflow ui --host 0.0.0.0 --port 8080
+              restart: unless-stopped
+              
+            redis:
+              image: redis:7
+              container_name: clinical_redis_staging
+              ports:
+                - "6380:6379"
+              restart: unless-stopped
+              
+          volumes:
+            mlruns_staging:
+          EOF
+          
+          # Deploy
+          docker-compose -f docker-compose.staging.yml up -d
+          
+          echo "✅ Staging deployment completed!"
+          echo "Services available at:"
+          echo "- API: http://localhost:8001"
+          echo "- Dashboard: http://localhost:8502"
+          echo "- MLflow: http://localhost:8081"
+          
+      - name: Deploy to Production
+        if: github.event.inputs.environment == 'production'
+        run: |
+          echo "🚀 Deploying to production environment..."
+          
+          # Pull latest images
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
+          
+          # Deploy using docker-compose
+          echo "Deploying version: ${{ github.event.inputs.version }}"
+          
+          # Create production docker-compose file
+          cat > docker-compose.prod.yml << EOF
+          version: '3.9'
+          services:
+            api:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              container_name: clinical_api_prod
+              ports:
+                - "8000:8000"
+              environment:
+                - REDIS_HOST=redis
+              depends_on:
+                - redis
+              restart: unless-stopped
+              deploy:
+                replicas: 2
+                
+            app:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
+              container_name: clinical_app_prod
+              ports:
+                - "8501:8501"
+              environment:
+                - API_BASE_URL=http://api:8000
+              depends_on:
+                - api
+              restart: unless-stopped
+              
+            mlflow:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              container_name: clinical_mlflow_prod
+              ports:
+                - "8080:8080"
+              volumes:
+                - mlruns_prod:/app/mlruns
+              command: mlflow ui --host 0.0.0.0 --port 8080
+              restart: unless-stopped
+              
+            redis:
+              image: redis:7
+              container_name: clinical_redis_prod
+              ports:
+                - "6379:6379"
+              restart: unless-stopped
+              
+          volumes:
+            mlruns_prod:
+          EOF
+          
+          # Deploy
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          echo "✅ Production deployment completed!"
+          echo "Services available at:"
+          echo "- API: http://localhost:8000"
+          echo "- Dashboard: http://localhost:8501"
+          echo "- MLflow: http://localhost:8080"
+          
+      - name: Health Check
+        run: |
+          echo "🏥 Running health checks..."
+          sleep 30
+          
+          # Check API health
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            API_URL="http://localhost:8001"
+          else
+            API_URL="http://localhost:8000"
+          fi
+          
+          curl -f $API_URL/health || exit 1
+          echo "✅ Health check passed!"
+          
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🎉 Deployment to ${{ github.event.inputs.environment }} completed successfully!"
+          echo "Version: ${{ github.event.inputs.version }}"
+          # Add notification logic here (Slack, email, etc.)
+          
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Deployment to ${{ github.event.inputs.environment }} failed!"
+          echo "Version: ${{ github.event.inputs.version }}"
+          # Add notification logic here (Slack, email, etc.)
+          
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: deploy
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Rollback to previous version
+        run: |
+          echo "🔄 Rolling back deployment..."
+          
+          # Get previous version (you might want to store this in a file or use a different strategy)
+          PREVIOUS_VERSION="latest"
+          
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            docker-compose -f docker-compose.staging.yml down
+            # Deploy previous version
+            echo "Rolling back to version: $PREVIOUS_VERSION"
+          else
+            docker-compose -f docker-compose.prod.yml down
+            # Deploy previous version
+            echo "Rolling back to version: $PREVIOUS_VERSION"
+          fi
+          
+          echo "✅ Rollback completed!" 
