@@ -26,7 +26,7 @@ PREDICTIONS_FILE = PREDICTIONS_DIR / "predictions_with_clv.csv"
 VISUALIZATIONS_DIR = PROJECT_ROOT / "visualizations"
 
 # MLflow configuration
-MLFLOW_TRACKING_URI = f"file://{PROJECT_ROOT}/mlruns"
+MLFLOW_TRACKING_URI = "file:./mlruns"
 MLFLOW_EXPERIMENT_NAME = "clinical_churn_prediction"
 MLFLOW_MODEL_NAME = "clinical_churn_lightgbm"
 

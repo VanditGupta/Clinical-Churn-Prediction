@@ -26,18 +26,38 @@ import mlflow
 import mlflow.lightgbm
 from datetime import datetime
 import mlflow.models
+from pathlib import Path
 
 from config import *
 
 # Set up MLflow tracking and experiment
+# Safety check: ensure we're in the project root directory
+import os
+
+current_dir = Path.cwd()
+if not (current_dir / "src").exists() or not (current_dir / "api").exists():
+    print(f"⚠️  Warning: Not in project root directory. Current: {current_dir}")
+    print(f"   Expected project structure not found. This may cause MLflow issues.")
+
+# Ensure mlruns directory exists in current directory
+mlruns_dir = current_dir / "mlruns"
+mlruns_dir.mkdir(parents=True, exist_ok=True)
+print(f"✅ MLflow runs directory: {mlruns_dir.absolute()}")
+
 # Safety check: ensure tracking URI is within project directory
-if not str(MLFLOW_TRACKING_URI).startswith(f"file://{PROJECT_ROOT}"):
-    print(
-        f"⚠️  Warning: MLflow tracking URI is outside project directory: {MLFLOW_TRACKING_URI}"
-    )
-    print(
-        f"   This may cause permission issues. Expected: file://{PROJECT_ROOT}/mlruns"
-    )
+print(f"🔍 Debug: MLflow tracking URI: {MLFLOW_TRACKING_URI}")
+print(f"🔍 Debug: Current directory: {current_dir.absolute()}")
+print(f"🔍 Debug: Project root: {PROJECT_ROOT.absolute()}")
+
+# For relative paths, check if mlruns will be created in current directory
+if MLFLOW_TRACKING_URI.startswith("file:./"):
+    expected_mlruns = current_dir / "mlruns"
+    print(f"🔍 Debug: Expected mlruns location: {expected_mlruns.absolute()}")
+    if not expected_mlruns.parent.exists():
+        print(f"❌ Error: Cannot create mlruns in {expected_mlruns.parent}")
+        raise PermissionError(
+            f"Cannot create mlruns directory in {expected_mlruns.parent}"
+        )
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
