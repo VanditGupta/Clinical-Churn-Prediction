@@ -722,7 +722,7 @@ def save_model_and_metadata(
     import mlflow.models
     import numpy as np
     import pandas as pd
-    
+
     # Create a sample input for the model
     sample_data = pd.DataFrame(
         {
@@ -746,22 +746,23 @@ def save_model_and_metadata(
             "survey_score_avg": [7.0],
         }
     )
-    
+
     input_example = sample_data
     signature = None
     try:
         from mlflow.models.signature import infer_signature
+
         # Use a small sample of training data for signature inference
         sample_features = X_train.iloc[:1]  # Use first training sample
         sample_prediction = model.predict(sample_features)
         signature = infer_signature(sample_features, sample_prediction)
     except Exception:
         pass
-    
+
     # Temporarily disable MLflow model logging to avoid permission issues
     print("⚠️  MLflow model logging disabled to avoid permission issues")
     print("   Model saved locally only. MLflow logging can be re-enabled later.")
-    
+
     # mlflow.lightgbm.log_model(
     #     model,
     #     name="model",
@@ -770,7 +771,7 @@ def save_model_and_metadata(
     #     registered_model_name=MLFLOW_MODEL_NAME,
     # )
     # print(f"Model logged to MLflow as: {MLFLOW_MODEL_NAME}")
-    
+
     print(f"✅ Model saved locally to: {CHURN_MODEL_FILE}")
 
     # Save metadata
