@@ -1,6 +1,6 @@
 """
 Streamlit Dashboard for Clinical Study Churn & CLV Prediction
-Provides interactive UI for patient prediction and SHAP explainability with async operations and caching
+Provides interactive UI for patient prediction and SHAP explainability
 Enhanced with business-focused visualizations and insights
 """
 
@@ -9,15 +9,11 @@ import requests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 import asyncio
 import aiohttp
-import json
 from typing import Dict, Any, List
 import time
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 # Page configuration
 st.set_page_config(
@@ -49,7 +45,7 @@ def check_api_health():
     try:
         response = requests.get(f"{API_BASE_URL}/health", timeout=5)
         return response.status_code == 200
-    except:
+    except Exception:
         return False
 
 
@@ -331,7 +327,7 @@ def plot_shap_force(shap_values: Dict[str, float], patient_data: Dict[str, Any])
     y_pos = np.arange(len(features))
     colors = ["red" if v > 0 else "blue" for v in values]
 
-    bars = ax.barh(y_pos, values, color=colors, alpha=0.7)
+    ax.barh(y_pos, values, color=colors, alpha=0.7)
     ax.set_yticks(y_pos)
     ax.set_yticklabels(features)
     ax.set_xlabel("SHAP Value")
@@ -831,7 +827,9 @@ def display_customer_analysis():
         st.metric("Potential Savings (20% improvement)", f"${potential_savings:,.0f}")
 
     st.info(
-        "💡 **Business Recommendation:** Focus retention efforts on high-CLV patients with churn risk >70%. A 20% improvement in retention could save $100K+ in revenue."
+        "💡 **Business Recommendation:** Focus retention efforts on high-CLV patients "
+        "with churn risk >70%. A 20% improvement in retention could save "
+        "$100K+ in revenue."
     )
 
 
@@ -1025,7 +1023,8 @@ def main():
 
                     if batch_result:
                         st.success(
-                            f"✅ Batch prediction completed in {end_time - start_time:.2f} seconds"
+                            f"✅ Batch prediction completed in "
+                            f"{end_time - start_time:.2f} seconds"
                         )
                         display_batch_results(batch_result)
                     else:

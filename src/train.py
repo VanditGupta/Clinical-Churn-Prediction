@@ -25,6 +25,7 @@ import shap
 import mlflow
 import mlflow.lightgbm
 from datetime import datetime
+import mlflow.models
 
 from config import *
 
@@ -686,7 +687,20 @@ def save_model_and_metadata(model, label_encoders, metrics, feature_importance):
     print(f"Model saved to {CHURN_MODEL_FILE}")
 
     # Log model to MLflow
-    mlflow.lightgbm.log_model(model, MLFLOW_MODEL_NAME)
+    input_example = np.expand_dims(model.predict(model.feature_name()), axis=0) if hasattr(model, 'feature_name') else None
+    signature = None
+    try:
+        from mlflow.models.signature import infer_signature
+        signature = infer_signature(model.feature_name(), model.predict(model.feature_name()))
+    except Exception:
+        pass
+    mlflow.lightgbm.log_model(
+        model,
+        artifact_path="model",
+        input_example=input_example,
+        signature=signature,
+        registered_model_name=MLFLOW_MODEL_NAME
+    )
     print(f"Model logged to MLflow as: {MLFLOW_MODEL_NAME}")
 
     # Save metadata
