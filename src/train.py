@@ -687,11 +687,18 @@ def save_model_and_metadata(model, label_encoders, metrics, feature_importance):
     print(f"Model saved to {CHURN_MODEL_FILE}")
 
     # Log model to MLflow
-    input_example = np.expand_dims(model.predict(model.feature_name()), axis=0) if hasattr(model, 'feature_name') else None
+    input_example = (
+        np.expand_dims(model.predict(model.feature_name()), axis=0)
+        if hasattr(model, "feature_name")
+        else None
+    )
     signature = None
     try:
         from mlflow.models.signature import infer_signature
-        signature = infer_signature(model.feature_name(), model.predict(model.feature_name()))
+
+        signature = infer_signature(
+            model.feature_name(), model.predict(model.feature_name())
+        )
     except Exception:
         pass
     mlflow.lightgbm.log_model(
@@ -699,7 +706,7 @@ def save_model_and_metadata(model, label_encoders, metrics, feature_importance):
         artifact_path="model",
         input_example=input_example,
         signature=signature,
-        registered_model_name=MLFLOW_MODEL_NAME
+        registered_model_name=MLFLOW_MODEL_NAME,
     )
     print(f"Model logged to MLflow as: {MLFLOW_MODEL_NAME}")
 
