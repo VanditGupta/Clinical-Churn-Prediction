@@ -185,17 +185,33 @@ jobs:
           docker build -t clinical-api:test --target api .
           docker build -t clinical-app:test --target streamlit .
           
-      - name: Start services
+      - name: Start services with docker compose
         run: |
-          docker compose up -d redis
-          # Get the actual network name from docker compose
-          NETWORK_NAME=$(docker compose ps -q redis | xargs docker inspect -f '{{range $net, $config := .NetworkSettings.Networks}}{{$net}}{{end}}')
-          docker run -d --name test-api --network $NETWORK_NAME -p 8000:8000 clinical-api:test
-          sleep 10
+          # Start all services using docker compose
+          docker compose up -d
+          echo "⏳ Waiting for services to start..."
+          sleep 30
+          
+      - name: Check service status
+        run: |
+          echo "📊 Checking service status..."
+          docker compose ps
+          docker compose logs api
           
       - name: Test API endpoints
         run: |
           echo "🧪 Testing API health endpoint..."
+          # Wait for API to be ready
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/health 2>/dev/null; then
+              echo "✅ API is ready!"
+              break
+            fi
+            echo "⏳ Waiting for API... (attempt $i/30)"
+            sleep 2
+          done
+          
+          # Test health endpoint
           curl -f http://localhost:8000/health || exit 1
           
           echo "🧪 Testing prediction endpoint..."
@@ -206,8 +222,6 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker stop test-api || true
-          docker rm test-api || true
           docker compose down || true
 
   deploy-staging:
