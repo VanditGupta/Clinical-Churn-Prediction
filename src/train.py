@@ -718,7 +718,7 @@ def save_model_and_metadata(
         }
     )
 
-    input_example = sample_data.values
+    input_example = sample_data
     signature = None
     try:
         from mlflow.models.signature import infer_signature
@@ -732,7 +732,7 @@ def save_model_and_metadata(
 
     mlflow.lightgbm.log_model(
         model,
-        artifact_path="model",
+        name="model",
         input_example=input_example,
         signature=signature,
         registered_model_name=MLFLOW_MODEL_NAME,
