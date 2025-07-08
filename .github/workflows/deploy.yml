@@ -40,38 +40,29 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Deploy to Staging
-        if: github.event.inputs.environment == 'staging'
+      - name: Deploy to staging
         run: |
           echo "🚀 Deploying to staging environment..."
+          # Deploy using docker compose
           
-          # Pull latest images
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
-          
-          # Deploy using docker-compose
-          echo "Deploying version: ${{ github.event.inputs.version }}"
-          
-          # Create staging docker-compose file
+          # Create staging docker compose file
           cat > docker-compose.staging.yml << EOF
           version: '3.9'
           services:
             api:
-              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
               container_name: clinical_api_staging
               ports:
-                - "8001:8000"
+                - "8000:8000"
               environment:
-                - REDIS_HOST=redis
-              depends_on:
-                - redis
+                - ENVIRONMENT=staging
               restart: unless-stopped
               
             app:
-              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging-streamlit
               container_name: clinical_app_staging
               ports:
-                - "8502:8501"
+                - "8501:8501"
               environment:
                 - API_BASE_URL=http://api:8000
               depends_on:
@@ -79,48 +70,25 @@ jobs:
               restart: unless-stopped
               
             mlflow:
-              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
               container_name: clinical_mlflow_staging
               ports:
-                - "8081:8080"
-              volumes:
-                - mlruns_staging:/app/mlruns
+                - "8080:8080"
               command: mlflow ui --host 0.0.0.0 --port 8080
               restart: unless-stopped
-              
-            redis:
-              image: redis:7
-              container_name: clinical_redis_staging
-              ports:
-                - "6380:6379"
-              restart: unless-stopped
-              
-          volumes:
-            mlruns_staging:
           EOF
           
-          # Deploy
-          docker-compose -f docker-compose.staging.yml up -d
-          
-          echo "✅ Staging deployment completed!"
-          echo "Services available at:"
-          echo "- API: http://localhost:8001"
-          echo "- Dashboard: http://localhost:8502"
-          echo "- MLflow: http://localhost:8081"
+          # Deploy staging
+          docker compose -f docker-compose.staging.yml up -d
+          echo "✅ Staging deployment completed"
           
       - name: Deploy to Production
         if: github.event.inputs.environment == 'production'
         run: |
           echo "🚀 Deploying to production environment..."
+          # Deploy using docker compose
           
-          # Pull latest images
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
-          
-          # Deploy using docker-compose
-          echo "Deploying version: ${{ github.event.inputs.version }}"
-          
-          # Create production docker-compose file
+          # Create production docker compose file
           cat > docker-compose.prod.yml << EOF
           version: '3.9'
           services:
@@ -130,13 +98,9 @@ jobs:
               ports:
                 - "8000:8000"
               environment:
-                - REDIS_HOST=redis
-              depends_on:
-                - redis
+                - ENVIRONMENT=production
               restart: unless-stopped
-              deploy:
-                replicas: 2
-                
+              
             app:
               image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.version }}-streamlit
               container_name: clinical_app_prod
@@ -153,30 +117,13 @@ jobs:
               container_name: clinical_mlflow_prod
               ports:
                 - "8080:8080"
-              volumes:
-                - mlruns_prod:/app/mlruns
               command: mlflow ui --host 0.0.0.0 --port 8080
               restart: unless-stopped
-              
-            redis:
-              image: redis:7
-              container_name: clinical_redis_prod
-              ports:
-                - "6379:6379"
-              restart: unless-stopped
-              
-          volumes:
-            mlruns_prod:
           EOF
           
-          # Deploy
-          docker-compose -f docker-compose.prod.yml up -d
-          
-          echo "✅ Production deployment completed!"
-          echo "Services available at:"
-          echo "- API: http://localhost:8000"
-          echo "- Dashboard: http://localhost:8501"
-          echo "- MLflow: http://localhost:8080"
+          # Deploy production
+          docker compose -f docker-compose.prod.yml up -d
+          echo "✅ Production deployment completed"
           
       - name: Health Check
         run: |
@@ -206,6 +153,18 @@ jobs:
           echo "❌ Deployment to ${{ github.event.inputs.environment }} failed!"
           echo "Version: ${{ github.event.inputs.version }}"
           # Add notification logic here (Slack, email, etc.)
+          
+      - name: Cleanup Staging
+        if: github.event.inputs.environment == 'staging' && always()
+        run: |
+          echo "🧹 Cleaning up staging environment..."
+          docker compose -f docker-compose.staging.yml down
+          
+      - name: Cleanup Production
+        if: github.event.inputs.environment == 'production' && always()
+        run: |
+          echo "🧹 Cleaning up production environment..."
+          docker compose -f docker-compose.prod.yml down
           
   rollback:
     name: Rollback Deployment

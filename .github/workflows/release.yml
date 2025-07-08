@@ -83,7 +83,7 @@ jobs:
             
             ### Quick Start
             ```bash
-            docker-compose up --build
+            docker compose up --build
             ```
             
             ### Services
@@ -92,3 +92,7 @@ jobs:
             - MLflow: http://localhost:8080
           draft: false
           prerelease: false 
+      - name: Deploy with Docker Compose
+        run: |
+          echo "🚀 Deploying with Docker Compose..."
+          docker compose up --build 
