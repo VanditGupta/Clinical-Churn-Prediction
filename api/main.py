@@ -25,7 +25,7 @@ from .schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
 )
-from .utils import load_model_and_explainer, predict_churn_and_clv, explain_prediction
+from .utils import load_model_and_explainer, predict_churn_and_clv, explain_prediction, load_model_and_explainer_async
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -145,11 +145,8 @@ async def startup_event():
     global model, explainer, label_encoders
     print("Loading model and SHAP explainer...")
 
-    # Load model in background to avoid blocking startup
-    loop = asyncio.get_event_loop()
-    model, explainer, label_encoders = await loop.run_in_executor(
-        None, load_model_and_explainer
-    )
+    # Load model using the async wrapper
+    model, explainer, label_encoders = await load_model_and_explainer_async()
 
     # Initialize Redis connection
     await get_redis_client()
