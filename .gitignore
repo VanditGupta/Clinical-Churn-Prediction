@@ -105,8 +105,10 @@ dmypy.json
 *.pickle
 *.joblib
 
-# Data files (can be large)
+# Data files (can be large) - but allow specific data files
 *.csv
+!data/raw/*.csv
+!data/processed/*.csv
 *.parquet
 *.h5
 *.hdf5
@@ -188,7 +190,6 @@ env/
 # mlruns/
 # models/
 # predictions/
-# data/
 # visualizations/
 working_model.zip
 
