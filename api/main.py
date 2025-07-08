@@ -25,7 +25,12 @@ from .schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
 )
-from .utils import load_model_and_explainer, predict_churn_and_clv, explain_prediction, load_model_and_explainer_async
+from .utils import (
+    load_model_and_explainer,
+    predict_churn_and_clv,
+    explain_prediction,
+    load_model_and_explainer_async,
+)
 
 # Initialize FastAPI app
 app = FastAPI(
