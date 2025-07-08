@@ -17,18 +17,19 @@ import mlflow
 import mlflow.lightgbm
 from config import MLFLOW_TRACKING_URI, MLFLOW_EXPERIMENT_NAME
 
+
 def setup_mlflow():
     """Setup MLflow tracking and experiment"""
     print("Setting up MLflow experiment tracking...")
-    
+
     # Set tracking URI
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     print(f"MLflow tracking URI: {MLFLOW_TRACKING_URI}")
-    
+
     # Set experiment
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
     print(f"MLflow experiment: {MLFLOW_EXPERIMENT_NAME}")
-    
+
     # Get experiment info
     experiment = mlflow.get_experiment_by_name(MLFLOW_EXPERIMENT_NAME)
     if experiment:
@@ -36,25 +37,26 @@ def setup_mlflow():
     else:
         print("Creating new experiment...")
 
+
 def main():
     """Main function to run training with MLflow tracking"""
     print("=" * 60)
     print("Clinical Study Churn Prediction - MLflow Tracking")
     print("=" * 60)
-    
+
     # Setup MLflow
     setup_mlflow()
-    
+
     # Import and run training
     from train import main as train_main
-    
+
     print("\nStarting MLflow experiment run...")
     print("All metrics, parameters, and artifacts will be logged to MLflow")
     print("-" * 60)
-    
+
     # Run training (MLflow logging is handled in train.py)
     train_main()
-    
+
     print("\n" + "=" * 60)
     print("Training completed with MLflow tracking!")
     print("=" * 60)
@@ -67,5 +69,6 @@ def main():
     print("2. Select experiment: clinical_churn_prediction")
     print("3. Compare different runs and their metrics")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

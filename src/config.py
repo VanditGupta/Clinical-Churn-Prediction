@@ -40,41 +40,68 @@ VALIDATION_SIZE = 0.1
 
 # Feature names for the dataset
 FEATURE_COLUMNS = [
-    'participant_id', 'age', 'gender', 'income', 'location', 'study_type',
-    'condition', 'visit_adherence_rate', 'tenure_months', 'last_visit_gap_days',
-    'num_medications', 'has_side_effects', 'transport_support', 'monthly_stipend',
-    'contact_frequency', 'support_group_member', 'language_barrier',
-    'device_usage_compliance', 'survey_score_avg'
+    "participant_id",
+    "age",
+    "gender",
+    "income",
+    "location",
+    "study_type",
+    "condition",
+    "visit_adherence_rate",
+    "tenure_months",
+    "last_visit_gap_days",
+    "num_medications",
+    "has_side_effects",
+    "transport_support",
+    "monthly_stipend",
+    "contact_frequency",
+    "support_group_member",
+    "language_barrier",
+    "device_usage_compliance",
+    "survey_score_avg",
 ]
 
-TARGET_COLUMN = 'churned'
-CLV_COLUMN = 'clv'
+TARGET_COLUMN = "churned"
+CLV_COLUMN = "clv"
 
 # Categorical features for encoding
 CATEGORICAL_FEATURES = [
-    'gender', 'location', 'study_type', 'condition', 'has_side_effects',
-    'transport_support', 'support_group_member', 'language_barrier'
+    "gender",
+    "location",
+    "study_type",
+    "condition",
+    "has_side_effects",
+    "transport_support",
+    "support_group_member",
+    "language_barrier",
 ]
 
 # Numerical features
 NUMERICAL_FEATURES = [
-    'age', 'income', 'visit_adherence_rate', 'tenure_months', 'last_visit_gap_days',
-    'num_medications', 'monthly_stipend', 'contact_frequency', 'device_usage_compliance',
-    'survey_score_avg'
+    "age",
+    "income",
+    "visit_adherence_rate",
+    "tenure_months",
+    "last_visit_gap_days",
+    "num_medications",
+    "monthly_stipend",
+    "contact_frequency",
+    "device_usage_compliance",
+    "survey_score_avg",
 ]
 
 # LightGBM model parameters
 LIGHTGBM_PARAMS = {
-    'objective': 'binary',
-    'metric': 'binary_logloss',
-    'boosting_type': 'gbdt',
-    'num_leaves': 31,
-    'learning_rate': 0.05,
-    'feature_fraction': 0.9,
-    'bagging_fraction': 0.8,
-    'bagging_freq': 5,
-    'verbose': -1,
-    'random_state': RANDOM_SEED
+    "objective": "binary",
+    "metric": "binary_logloss",
+    "boosting_type": "gbdt",
+    "num_leaves": 31,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.9,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "verbose": -1,
+    "random_state": RANDOM_SEED,
 }
 
 # CLV calculation parameters
@@ -94,11 +121,20 @@ DEVICE_COMPLIANCE_RANGE = (0.2, 1.0)
 SURVEY_SCORE_RANGE = (1, 10)
 
 # Categorical options
-GENDERS = ['Male', 'Female', 'Other']
-LOCATIONS = ['Urban', 'Suburban', 'Rural']
-STUDY_TYPES = ['Phase I', 'Phase II', 'Phase III']
-CONDITIONS = ['Diabetes', 'Hypertension', 'Cardiovascular Disease', 'Obesity', 
-              'Respiratory Disease', 'Mental Health', 'Cancer', 'Autoimmune Disease']
+GENDERS = ["Male", "Female", "Other"]
+LOCATIONS = ["Urban", "Suburban", "Rural"]
+STUDY_TYPES = ["Phase I", "Phase II", "Phase III"]
+CONDITIONS = [
+    "Diabetes",
+    "Hypertension",
+    "Cardiovascular Disease",
+    "Obesity",
+    "Respiratory Disease",
+    "Mental Health",
+    "Cancer",
+    "Autoimmune Disease",
+]
+
 
 # Ensure directories exist
 def ensure_directories():
@@ -106,11 +142,12 @@ def ensure_directories():
     directories = [RAW_DATA_DIR, MODELS_DIR, PREDICTIONS_DIR, VISUALIZATIONS_DIR]
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
-    
+
     # Create MLflow runs directory
     mlruns_dir = PROJECT_ROOT / "mlruns"
     mlruns_dir.mkdir(parents=True, exist_ok=True)
 
+
 if __name__ == "__main__":
     ensure_directories()
-    print("Directories created successfully!") 
+    print("Directories created successfully!")
