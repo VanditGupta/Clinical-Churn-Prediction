@@ -47,4 +47,25 @@ class HealthResponse(BaseModel):
     
     status: str = Field(..., description="Health status")
     model_loaded: bool = Field(..., description="Whether model is loaded")
-    explainer_loaded: bool = Field(..., description="Whether SHAP explainer is loaded") 
+    explainer_loaded: bool = Field(..., description="Whether SHAP explainer is loaded")
+
+class BatchPredictionRequest(BaseModel):
+    """Request schema for batch predictions"""
+    
+    patients: List[Dict[str, Any]] = Field(..., description="List of patient features")
+    max_concurrent: Optional[int] = Field(10, description="Maximum concurrent predictions")
+
+class BatchPredictionResponse(BaseModel):
+    """Response schema for batch predictions"""
+    
+    predictions: List[Dict[str, Any]] = Field(..., description="List of successful predictions")
+    errors: List[Dict[str, Any]] = Field(..., description="List of prediction errors")
+    total_patients: int = Field(..., description="Total number of patients in batch")
+    successful_predictions: int = Field(..., description="Number of successful predictions")
+    failed_predictions: int = Field(..., description="Number of failed predictions")
+
+class CacheStatsResponse(BaseModel):
+    """Response schema for cache statistics"""
+    
+    in_memory_cache: Dict[str, int] = Field(..., description="In-memory cache statistics")
+    redis_cache: Dict[str, Any] = Field(..., description="Redis cache information") 

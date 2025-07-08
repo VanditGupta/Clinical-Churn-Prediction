@@ -1,6 +1,6 @@
 """
 Streamlit Dashboard for Clinical Study Churn & CLV Prediction
-Provides interactive UI for patient prediction and SHAP explainability
+Provides interactive UI for patient prediction and SHAP explainability with async operations and caching
 """
 
 import streamlit as st
@@ -9,8 +9,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Dict, Any
+import asyncio
+import aiohttp
 import json
+from typing import Dict, Any, List
+import time
 
 # Page configuration
 st.set_page_config(
@@ -23,6 +26,17 @@ st.set_page_config(
 # API configuration
 API_BASE_URL = "http://localhost:8000"
 
+# Cache configuration for Streamlit
+@st.cache_data(ttl=3600)  # 1 hour cache
+def get_cached_prediction(patient_data_hash: str):
+    """Cache predictions to avoid repeated API calls"""
+    return None  # Will be implemented with actual caching
+
+@st.cache_data(ttl=1800)  # 30 minutes cache
+def get_cached_explanation(patient_data_hash: str):
+    """Cache explanations to avoid repeated API calls"""
+    return None  # Will be implemented with actual caching
+
 def check_api_health():
     """Check if the FastAPI backend is running"""
     try:
@@ -31,8 +45,51 @@ def check_api_health():
     except:
         return False
 
+async def get_prediction_async(patient_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Get prediction from FastAPI backend asynchronously"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{API_BASE_URL}/predict", json=patient_data) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    st.error(f"API Error: {response.status}")
+                    return None
+    except Exception as e:
+        st.error(f"Error connecting to API: {str(e)}")
+        return None
+
+async def get_explanation_async(patient_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Get SHAP explanation from FastAPI backend asynchronously"""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{API_BASE_URL}/explain", json=patient_data) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    st.error(f"API Error: {response.status}")
+                    return None
+    except Exception as e:
+        st.error(f"Error getting explanation: {str(e)}")
+        return None
+
+async def get_batch_predictions_async(patients_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Get batch predictions from FastAPI backend asynchronously"""
+    try:
+        batch_request = {"patients": patients_data}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{API_BASE_URL}/predict/batch", json=batch_request) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    st.error(f"Batch API Error: {response.status}")
+                    return None
+    except Exception as e:
+        st.error(f"Error getting batch predictions: {str(e)}")
+        return None
+
 def get_prediction(patient_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Get prediction from FastAPI backend"""
+    """Get prediction from FastAPI backend (synchronous fallback)"""
     try:
         response = requests.post(f"{API_BASE_URL}/predict", json=patient_data)
         response.raise_for_status()
@@ -42,7 +99,7 @@ def get_prediction(patient_data: Dict[str, Any]) -> Dict[str, Any]:
         return None
 
 def get_explanation(patient_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Get SHAP explanation from FastAPI backend"""
+    """Get SHAP explanation from FastAPI backend (synchronous fallback)"""
     try:
         response = requests.post(f"{API_BASE_URL}/explain", json=patient_data)
         response.raise_for_status()
@@ -199,178 +256,341 @@ def plot_shap_waterfall(shap_values: Dict[str, float]):
         ax.text(bar.get_width() + (0.01 if value > 0 else -0.01), 
                 bar.get_y() + bar.get_height()/2, 
                 f'{value:.3f}', 
-                va='center', 
-                ha='left' if value > 0 else 'right',
-                fontsize=10)
-    
-    # Add vertical line at zero
-    ax.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+                va='center', fontsize=10)
     
     plt.tight_layout()
     return fig
 
 def plot_shap_force(shap_values: Dict[str, float], patient_data: Dict[str, Any]):
     """Create SHAP force plot"""
-    # Prepare data for force plot
-    feature_values = []
-    feature_names = []
-    shap_values_list = []
+    # Create a simple force plot visualization
+    fig, ax = plt.subplots(figsize=(12, 6))
     
-    for feature, shap_value in shap_values.items():
-        if feature in patient_data:
-            feature_values.append(patient_data[feature])
-            feature_names.append(feature)
-            shap_values_list.append(shap_value)
-    
-    # Create force plot
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Sort by absolute SHAP value
-    sorted_indices = sorted(range(len(shap_values_list)), 
-                           key=lambda i: abs(shap_values_list[i]), reverse=True)
-    
-    sorted_values = [shap_values_list[i] for i in sorted_indices]
-    sorted_names = [feature_names[i] for i in sorted_indices]
-    sorted_feature_values = [feature_values[i] for i in sorted_indices]
+    # Sort features by absolute SHAP value
+    sorted_features = sorted(shap_values.items(), key=lambda x: abs(x[1]), reverse=True)
+    features = [x[0] for x in sorted_features[:10]]  # Top 10 features
+    values = [x[1] for x in sorted_features[:10]]
     
     # Create horizontal bar plot
-    colors = ['red' if v > 0 else 'blue' for v in sorted_values]
-    bars = ax.barh(range(len(sorted_names)), sorted_values, color=colors, alpha=0.7)
+    y_pos = np.arange(len(features))
+    colors = ['red' if v > 0 else 'blue' for v in values]
     
-    # Add feature value annotations
-    for i, (bar, value, feature_value) in enumerate(zip(bars, sorted_values, sorted_feature_values)):
-        ax.text(bar.get_width() + (0.01 if value > 0 else -0.01), 
-                bar.get_y() + bar.get_height()/2, 
-                f'{feature_value}', 
-                va='center', 
-                ha='left' if value > 0 else 'right',
-                fontsize=9, style='italic')
-    
-    ax.set_yticks(range(len(sorted_names)))
-    ax.set_yticklabels(sorted_names)
+    bars = ax.barh(y_pos, values, color=colors, alpha=0.7)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(features)
     ax.set_xlabel('SHAP Value')
-    ax.set_title('SHAP Force Plot - Feature Values and Impact', fontsize=14, fontweight='bold')
-    ax.axvline(x=0, color='black', linestyle='-', alpha=0.3)
+    ax.set_title('SHAP Force Plot - Feature Contributions', fontsize=14, fontweight='bold')
+    
+    # Add feature values as text
+    for i, (feature, value) in enumerate(zip(features, values)):
+        feature_value = patient_data.get(feature, 'N/A')
+        ax.text(value + (0.01 if value > 0 else -0.01), i, 
+                f' = {feature_value}', va='center', fontsize=9)
     
     plt.tight_layout()
     return fig
 
 def display_shap_explanation(explanation_result: Dict[str, Any], patient_data: Dict[str, Any]):
-    """Display SHAP explanation results"""
+    """Display SHAP explanation"""
     st.subheader("🔍 SHAP Explanation")
     
     shap_values = explanation_result["shap_values"]
     feature_importance = explanation_result["feature_importance"]
     
-    # Display top features
-    st.write("**Top Features by Impact:**")
+    # Display feature importance table
+    st.write("**Feature Importance Ranking**")
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Waterfall plot
-        fig_waterfall = plot_shap_waterfall(shap_values)
-        st.pyplot(fig_waterfall)
-        plt.close()
-    
-    with col2:
-        # Force plot
-        fig_force = plot_shap_force(shap_values, patient_data)
-        st.pyplot(fig_force)
-        plt.close()
-    
-    # Feature importance table
-    st.write("**Detailed Feature Analysis:**")
-    importance_df = pd.DataFrame(feature_importance)
-    importance_df['shap_value'] = importance_df['shap_value'].round(4)
-    importance_df['abs_value'] = importance_df['abs_value'].round(4)
-    
-    # Color code the direction
     def color_direction(val):
-        if val == 'positive':
+        if val > 0:
             return 'background-color: lightcoral'
         else:
             return 'background-color: lightblue'
     
-    styled_df = importance_df.style.applymap(color_direction, subset=['direction'])
+    # Create DataFrame for display
+    df_importance = pd.DataFrame(feature_importance)
+    df_importance['feature_value'] = df_importance['feature'].map(lambda x: patient_data.get(x, 'N/A'))
+    
+    # Style the DataFrame
+    styled_df = df_importance.style.applymap(
+        lambda x: color_direction(x) if isinstance(x, (int, float)) else '', 
+        subset=['shap_value']
+    )
+    
     st.dataframe(styled_df, use_container_width=True)
+    
+    # Display plots
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**Waterfall Plot**")
+        fig_waterfall = plot_shap_waterfall(shap_values)
+        st.pyplot(fig_waterfall)
+    
+    with col2:
+        st.write("**Force Plot**")
+        fig_force = plot_shap_force(shap_values, patient_data)
+        st.pyplot(fig_force)
+
+def create_batch_input_form():
+    """Create batch prediction input form"""
+    st.subheader("📊 Batch Prediction")
+    
+    # File upload option
+    uploaded_file = st.file_uploader(
+        "Upload CSV file with patient data", 
+        type=['csv'],
+        help="CSV should have columns matching the patient input fields"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            df = pd.read_csv(uploaded_file)
+            st.write(f"Loaded {len(df)} patients from file")
+            st.dataframe(df.head(), use_container_width=True)
+            return df.to_dict('records')
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
+            return None
+    
+    # Manual batch input
+    st.write("**Or create batch manually:**")
+    num_patients = st.slider("Number of patients", 2, 50, 5)
+    
+    if st.button("Generate Sample Batch"):
+        # Generate sample data
+        sample_patients = []
+        for i in range(num_patients):
+            patient = {
+                "age": np.random.randint(18, 85),
+                "gender": np.random.choice(["Male", "Female", "Other"]),
+                "income": np.random.randint(20000, 150000),
+                "location": np.random.choice(["Urban", "Suburban", "Rural"]),
+                "study_type": np.random.choice(["Phase I", "Phase II", "Phase III"]),
+                "condition": np.random.choice([
+                    "Diabetes", "Hypertension", "Cardiovascular Disease", "Obesity",
+                    "Respiratory Disease", "Mental Health", "Cancer", "Autoimmune Disease"
+                ]),
+                "visit_adherence_rate": np.random.uniform(0.3, 1.0),
+                "tenure_months": np.random.randint(1, 36),
+                "last_visit_gap_days": np.random.randint(0, 90),
+                "num_medications": np.random.randint(0, 8),
+                "has_side_effects": np.random.choice([True, False]),
+                "transport_support": np.random.choice([True, False]),
+                "monthly_stipend": np.random.randint(100, 1000),
+                "contact_frequency": np.random.uniform(1.0, 8.0),
+                "support_group_member": np.random.choice([True, False]),
+                "language_barrier": np.random.choice([True, False]),
+                "device_usage_compliance": np.random.uniform(0.2, 1.0),
+                "survey_score_avg": np.random.uniform(1.0, 10.0)
+            }
+            sample_patients.append(patient)
+        
+        st.session_state.sample_patients = sample_patients
+        st.success(f"Generated {num_patients} sample patients")
+    
+    if 'sample_patients' in st.session_state:
+        st.write("**Sample Batch Data:**")
+        df_sample = pd.DataFrame(st.session_state.sample_patients)
+        st.dataframe(df_sample, use_container_width=True)
+        return st.session_state.sample_patients
+    
+    return None
+
+def display_batch_results(batch_result: Dict[str, Any]):
+    """Display batch prediction results"""
+    st.subheader("📊 Batch Prediction Results")
+    
+    # Summary metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Patients", batch_result["total_patients"])
+    
+    with col2:
+        st.metric("Successful Predictions", batch_result["successful_predictions"])
+    
+    with col3:
+        st.metric("Failed Predictions", batch_result["failed_predictions"])
+    
+    with col4:
+        success_rate = batch_result["successful_predictions"] / batch_result["total_patients"] * 100
+        st.metric("Success Rate", f"{success_rate:.1f}%")
+    
+    # Display predictions
+    if batch_result["predictions"]:
+        st.write("**Predictions:**")
+        df_predictions = pd.DataFrame(batch_result["predictions"])
+        st.dataframe(df_predictions, use_container_width=True)
+        
+        # Create summary statistics
+        if len(df_predictions) > 0:
+            st.write("**Summary Statistics:**")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Churn Probability Distribution:**")
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax.hist(df_predictions['churn_probability'], bins=20, alpha=0.7, color='skyblue')
+                ax.set_xlabel('Churn Probability')
+                ax.set_ylabel('Count')
+                ax.set_title('Distribution of Churn Probabilities')
+                st.pyplot(fig)
+            
+            with col2:
+                st.write("**CLV Distribution:**")
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax.hist(df_predictions['clv_estimate'], bins=20, alpha=0.7, color='lightgreen')
+                ax.set_xlabel('CLV Estimate ($)')
+                ax.set_ylabel('Count')
+                ax.set_title('Distribution of CLV Estimates')
+                st.pyplot(fig)
+    
+    # Display errors
+    if batch_result["errors"]:
+        st.write("**Errors:**")
+        df_errors = pd.DataFrame(batch_result["errors"])
+        st.dataframe(df_errors, use_container_width=True)
 
 def main():
-    """Main Streamlit application"""
+    """Main function"""
     st.title("🏥 Clinical Study Churn & CLV Prediction Dashboard")
-    st.markdown("---")
+    st.markdown("**Enhanced with Async Operations and Caching**")
     
     # Check API health
     if not check_api_health():
-        st.error("""
-        ⚠️ **FastAPI backend is not running!**
-        
-        Please start the backend server first:
-        ```bash
-        uvicorn api.main:app --reload
-        ```
-        
-        Then refresh this page.
-        """)
+        st.error("❌ FastAPI backend is not running. Please start the backend first.")
+        st.info("Run: `uvicorn api.main:app --reload`")
         return
     
-    st.success("✅ Connected to FastAPI backend")
+    st.success("✅ FastAPI backend is running")
     
-    # Create patient input form
-    patient_data = create_patient_input_form()
+    # Sidebar for navigation
+    st.sidebar.title("Navigation")
+    page = st.sidebar.selectbox(
+        "Choose a page",
+        ["Single Prediction", "Batch Prediction", "Cache Statistics"]
+    )
     
-    # Prediction button
-    if st.button("🚀 Get Prediction & Explanation", type="primary"):
-        with st.spinner("Getting prediction..."):
-            # Get prediction
-            prediction_result = get_prediction(patient_data)
-            
-            if prediction_result:
-                # Display prediction results
-                display_prediction_results(prediction_result)
+    if page == "Single Prediction":
+        st.header("🔮 Single Patient Prediction")
+        
+        # Create input form
+        patient_data = create_patient_input_form()
+        
+        # Prediction button
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            predict_button = st.button("🚀 Predict", type="primary")
+        
+        with col2:
+            use_async = st.checkbox("Use Async Operations", value=True, 
+                                  help="Enable async operations for better performance")
+        
+        if predict_button:
+            with st.spinner("Making prediction..."):
+                start_time = time.time()
                 
-                # Get SHAP explanation
-                with st.spinner("Generating SHAP explanation..."):
-                    explanation_result = get_explanation(patient_data)
+                if use_async:
+                    # Use async operations
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    try:
+                        prediction_result = loop.run_until_complete(
+                            get_prediction_async(patient_data)
+                        )
+                    finally:
+                        loop.close()
+                else:
+                    # Use synchronous operations
+                    prediction_result = get_prediction(patient_data)
+                
+                end_time = time.time()
+                
+                if prediction_result:
+                    st.success(f"✅ Prediction completed in {end_time - start_time:.2f} seconds")
+                    display_prediction_results(prediction_result)
                     
-                    if explanation_result:
-                        # Display SHAP explanation
-                        display_shap_explanation(explanation_result, patient_data)
-                    else:
-                        st.error("Failed to get SHAP explanation")
-            else:
-                st.error("Failed to get prediction")
+                    # SHAP explanation
+                    with st.expander("🔍 View SHAP Explanation"):
+                        with st.spinner("Generating SHAP explanation..."):
+                            if use_async:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                try:
+                                    explanation_result = loop.run_until_complete(
+                                        get_explanation_async(patient_data)
+                                    )
+                                finally:
+                                    loop.close()
+                            else:
+                                explanation_result = get_explanation(patient_data)
+                            
+                            if explanation_result:
+                                display_shap_explanation(explanation_result, patient_data)
+                            else:
+                                st.error("Failed to generate SHAP explanation")
+                else:
+                    st.error("❌ Prediction failed")
     
-    # Sidebar with information
-    with st.sidebar:
-        st.header("ℹ️ About")
-        st.markdown("""
-        This dashboard provides:
+    elif page == "Batch Prediction":
+        st.header("📊 Batch Prediction")
         
-        **🎯 Churn Prediction**
-        - Predicts likelihood of patient dropping out
-        - Calculates Customer Lifetime Value (CLV)
-        - Categorizes risk levels
+        # Create batch input
+        patients_data = create_batch_input_form()
         
-        **🔍 SHAP Explainability**
-        - Shows which features drive predictions
-        - Visualizes feature impact and values
-        - Provides interpretable AI insights
+        if patients_data:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                batch_predict_button = st.button("🚀 Batch Predict", type="primary")
+            
+            with col2:
+                use_async_batch = st.checkbox("Use Async Operations", value=True, 
+                                            help="Enable async operations for better performance")
+            
+            if batch_predict_button:
+                with st.spinner(f"Processing {len(patients_data)} patients..."):
+                    start_time = time.time()
+                    
+                    if use_async_batch:
+                        # Use async operations
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            batch_result = loop.run_until_complete(
+                                get_batch_predictions_async(patients_data)
+                            )
+                        finally:
+                            loop.close()
+                    else:
+                        # Use synchronous operations (fallback)
+                        st.warning("Batch predictions require async operations")
+                        batch_result = None
+                    
+                    end_time = time.time()
+                    
+                    if batch_result:
+                        st.success(f"✅ Batch prediction completed in {end_time - start_time:.2f} seconds")
+                        display_batch_results(batch_result)
+                    else:
+                        st.error("❌ Batch prediction failed")
+    
+    elif page == "Cache Statistics":
+        st.header("📈 Cache Statistics")
         
-        **📊 Risk Categories**
-        - **Low Risk**: 0-30% churn probability
-        - **Medium Risk**: 30-60% churn probability  
-        - **High Risk**: 60-100% churn probability
-        """)
-        
-        st.header("🔧 Technical Details")
-        st.markdown("""
-        - **Model**: LightGBM Gradient Boosting
-        - **Features**: 18 clinical and demographic variables
-        - **Explainability**: SHAP (SHapley Additive exPlanations)
-        - **Backend**: FastAPI with async endpoints
-        - **Frontend**: Streamlit interactive dashboard
-        """)
+        try:
+            response = requests.get(f"{API_BASE_URL}/cache/stats")
+            if response.status_code == 200:
+                cache_stats = response.json()
+                
+                st.write("**In-Memory Cache:**")
+                st.json(cache_stats["in_memory_cache"])
+                
+                st.write("**Redis Cache:**")
+                st.json(cache_stats["redis_cache"])
+            else:
+                st.error("Failed to get cache statistics")
+        except Exception as e:
+            st.error(f"Error getting cache statistics: {e}")
 
 if __name__ == "__main__":
     main() 

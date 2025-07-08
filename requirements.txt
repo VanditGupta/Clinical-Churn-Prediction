@@ -10,4 +10,8 @@ mlflow
 fastapi
 uvicorn
 streamlit
-requests 
+requests
+redis
+cachetools
+aiofiles
+httpx 
